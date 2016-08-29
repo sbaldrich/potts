@@ -1,54 +1,53 @@
 package com.baldrichcorp.potts.index;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.baldrichcorp.potts.index.query.IndexKeySet;
 
 /**
  * A Recursive {@code RangeQueryIndex} that allows searching and indexing using an arbitrary number
- * of keys represented by a {@code IndexKeySet}.
- * @param <T>
- * @param <K>
+ * of keys represented by {@code IndexKeySet}s.
+ *
+ * @param <T> the type of the elements that can be added to the index.
+ * @param <K> the type of the criterion used for comparison in queries.
+ *
+ * @author Santiago Baldrich.
  */
-public class RecursiveRangeQueryIndex<T, K extends Comparable<? super K>> {
+public interface RecursiveRangeQueryIndex<T, K extends Comparable<? super K>> {
 
-    private RangeQueryIndex<Object, K> index = new ListRangeQueryIndex<>();
+    /**
+     * Add a new element to the index.
+     *
+     * @param keys the keys that represent the location of the new element in the index.
+     * @param pos  the position of the new element in the index.
+     */
+    void add(IndexKeySet keys, K pos);
 
-    private Map<Object, RecursiveRangeQueryIndex<T, K>> branches = new HashMap<>();
+    /**
+     * Count the number of observations of <em>t</em> that fall within the given range.
+     *
+     * @param keys  the keys that represent the element to look for.
+     * @param start the lower bound of the query.
+     * @param end   the upper bound of the query.
+     * @return the number of observations of <em>t</em> that fall within the range <em>[start,end]</em>.
+     */
+    int query(IndexKeySet keys, K start, K end);
 
-    public void add(IndexKeySet keys, K pos) {
-        if (keys.isLast()) {
-            index.add(keys.pop(), pos);
-            return;
-        }
-        branches.putIfAbsent(keys.peek(), new RecursiveRangeQueryIndex<>());
-        branches.get(keys.pop()).add(keys, pos);
-    }
+    /**
+     * Add up the number of observations of all elements in the index fall within the given range.
+     *
+     * @param keys  the keys that represent the element to look for
+     * @param start the lower bound of the query.
+     * @param end   the upper bound of the query.
+     * @return the sum of all observations of all elements that fall within the range <em>[start,end]</em>.
+     */
+    int accumulate(IndexKeySet keys, K start, K end);
 
-    public int query(IndexKeySet keys, K start, K end) {
-        if (keys.isLast()) {
-            return index.query(keys.pop(), start, end);
-        }
-        if (!branches.containsKey(keys.peek()))
-            return 0;
-        return branches.get(keys.pop()).query(keys, start, end);
-    }
-
-    public int accumulate(IndexKeySet keys, K start, K end) {
-        if (!keys.hasNext()) {
-            return index.accumulate(start, end);
-        }
-        if (!branches.containsKey(keys.peek()))
-            return 0;
-        return branches.get(keys.pop()).accumulate(keys, start, end);
-    }
-
-    public int count(IndexKeySet keys, K start, K end) {
-        if (!keys.hasNext()) {
-            return index.count(start, end);
-        }
-        if (!branches.containsKey(keys.peek()))
-            return 0;
-        return branches.get(keys.pop()).count(keys, start, end);
-    }
-
+    /**
+     * Count the number of distinct elements in the index that have at least one observation that falls within the given range.
+     *
+     * @param keys  the keys that represent the element to look for
+     * @param start the lower bound of the query.
+     * @param end   the upper bound of the query.
+     * @return the number of distinct elements in the index that have at least one observation that falls within the given range.
+     */
+    int count(IndexKeySet keys, K start, K end);
 }

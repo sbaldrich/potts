@@ -1,13 +1,20 @@
 package com.baldrichcorp.potts.index;
 
-import java.util.function.Function;
+import com.baldrichcorp.potts.index.query.IndexKeySet;
+import com.baldrichcorp.potts.index.query.QueryRange;
+import com.baldrichcorp.potts.index.query.RangeQueryResponse;
 
+import java.util.function.Function;
 
 /**
  * The {@code MultiCriteriaRangeQueryIndex} class provides a way of defining multiple indices for a particular
- * type of objects along with functions that determine the way attributes should be obtained for indexing.
+ * type of objects along with functions that determine the operations to obtain the indexing attributes. Each index and
+ * its generator function (the function used to obtain {@code IndexKeySet}s for inner operations) are identified by strings.
+ *
  * @param <T> The type of the elements that this index can hold.
- * @param <K> The criteria used for comparison in queries.
+ * @param <K> The type criterion used for comparison in queries.
+ *
+ * @author Santiago Baldrich.
  */
 public interface MultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>> {
 
@@ -53,6 +60,7 @@ public interface MultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>
      */
     int query(final String indexIdentifier, T t, K start, K end);
 
+    RangeQueryResponse query(final T t, QueryRange<K>... range);
     /**
      * Count the number of different instances that fall within the given range and have the longest proper prefix of
      * the keyset obtained from this element as prefix.
