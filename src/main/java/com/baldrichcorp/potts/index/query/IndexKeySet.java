@@ -1,5 +1,10 @@
 package com.baldrichcorp.potts.index.query;
 
+import lombok.ToString;
+
+import java.util.Arrays;
+import java.util.Objects;
+
 /**
  * Class {@code IndexKeySet} represents a set of keys that can be used
  * to traverse an index for querying or adding new elements. A key can be constituted by
@@ -11,6 +16,7 @@ package com.baldrichcorp.potts.index.query;
  *
  * @author Santiago Baldrich.
  */
+@ToString
 public class IndexKeySet {
 
     int left;
@@ -46,6 +52,26 @@ public class IndexKeySet {
     }
 
     /**
+     * Remove the first key from the key set.
+     *
+     * @return this instance.
+     */
+    public IndexKeySet skip() {
+        return skip(1);
+    }
+
+    /**
+     * Remove the first n keys from the key set.
+     *
+     * @param n the number of keys to drop.
+     * @return this instance.
+     */
+    public IndexKeySet skip(int n) {
+        left = Math.min(right, left + n);
+        return this;
+    }
+
+    /**
      * Remove the last key from the key set.
      *
      * @return this instance.
@@ -61,7 +87,7 @@ public class IndexKeySet {
      * @return this instance.
      */
     public IndexKeySet drop(int n) {
-        right--;
+        right = Math.max(left, right - n);
         return this;
     }
 
@@ -83,6 +109,15 @@ public class IndexKeySet {
      */
     public boolean isLast() {
         return right - left == 1;
+    }
+
+    /**
+     * Returns a boolean that indicates whether there is at least one null reference among the unexplored keys.
+     *
+     * @return <em>true</em> if popping keys would eventually return null, <em>false</em> otherwise.
+     */
+    public boolean hasNull() {
+        return Arrays.stream(keys).skip(left).limit(right - left).anyMatch(Objects::isNull);
     }
 
 }

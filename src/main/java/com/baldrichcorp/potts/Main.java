@@ -1,8 +1,8 @@
 package com.baldrichcorp.potts;
 
-import com.baldrichcorp.potts.index.query.IndexKeySet;
-import com.baldrichcorp.potts.index.MultiCriteriaRangeQueryIndex;
 import com.baldrichcorp.potts.index.MapMultiCriteriaRangeQueryIndex;
+import com.baldrichcorp.potts.index.MultiCriteriaRangeQueryIndex;
+import com.baldrichcorp.potts.index.query.IndexKeySet;
 import com.baldrichcorp.potts.index.query.QueryRange;
 import com.baldrichcorp.potts.io.CSVConsumer;
 import com.baldrichcorp.potts.io.CSVProducer;
@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -44,8 +45,10 @@ public class Main {
                 record.get("email"),
                 Integer.valueOf(record.get("pos"))));
 
-//        queries.consume().map(p -> index.query(p, QueryRange.of(1, 10))).forEach(System.out::println);
-        Map<String, List<Integer>> response =
+        Map<String, List<Integer>> response = new HashMap<>();
+
+
+        response.putAll(
                 queries.consume()
                         .map(p -> index.query(p, QueryRange.of(1, 10),
                                 QueryRange.of(4, 4),
@@ -53,7 +56,25 @@ public class Main {
                         .flatMap(m -> m.entrySet().stream())
                         .collect(Collectors
                                 .groupingBy(Map.Entry::getKey,
-                                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+                                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())))
+        );
+
+        queries = new CSVConsumer<>(ClassLoader.getSystemClassLoader().getResourceAsStream("persons.csv"),
+                ',', record -> Person.of(record.get("name"),
+                record.get("email"),
+                Integer.valueOf(record.get("pos"))));
+
+        response.putAll(
+                queries.consume()
+                        .map(p -> index.count(p, QueryRange.of("c[1,10]", 1, 10),
+                                QueryRange.of("c[4,4]", 4, 4),
+                                QueryRange.of("c[2,4]", 2, 4)).getResponseMap())
+                        .flatMap(m -> m.entrySet().stream())
+                        .collect(Collectors
+                                .groupingBy(Map.Entry::getKey,
+                                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())))
+        );
+
         System.out.printf("Queried = %s\n", Duration.between(start, Instant.now()));
         new CSVProducer().produce(response, "output.csv");
     }

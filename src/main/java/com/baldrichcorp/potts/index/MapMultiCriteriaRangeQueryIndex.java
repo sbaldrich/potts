@@ -5,6 +5,8 @@ import com.baldrichcorp.potts.index.query.QueryRange;
 import com.baldrichcorp.potts.index.query.RangeQueryResponse;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -56,7 +58,9 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
     @Override
     public void add(T t, K pos) {
         generators.keySet().parallelStream().forEach(k -> {
-            index.get(k).add(generators.get(k).apply(t), pos);
+            IndexKeySet ks = generators.get(k).apply(t);
+            if(!ks.hasNull())
+                index.get(k).add(ks, pos);
         });
     }
 
@@ -86,9 +90,26 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
     public RangeQueryResponse query(T t, QueryRange<K>... ranges) {
         return Stream.of(ranges).map(range -> {
             RangeQueryResponse response = new RangeQueryResponse(range);
-            generators.keySet().stream().forEach(k -> response.add(
-                    k, index.get(k).query(generators.get(k).apply(t), range.getStart(), range.getEnd())
-            ));
+            generators.keySet().stream().forEach(k -> {
+                IndexKeySet ks = generators.get(k).apply(t);
+                response.add(k, ks.hasNull() ? -1 : index.get(k).query(ks, range.getStart(), range.getEnd()));
+            });
+            return response;
+        }).reduce(RangeQueryResponse::merge).orElse(null);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public RangeQueryResponse count(T t, QueryRange<K>... ranges) {
+       return Stream.of(ranges).map(range -> {
+            RangeQueryResponse response = new RangeQueryResponse(range);
+            generators.keySet().stream().forEach(k -> {
+                IndexKeySet ks = generators.get(k).apply(t).drop();
+                response.add(k, ks.hasNull() ? -1 : index.get(k).count(ks, range.getStart(), range.getEnd()));
+            }
+            );
             return response;
         }).reduce(RangeQueryResponse::merge).orElse(null);
     }
@@ -111,6 +132,7 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
         return index.get(indexIdentifier).count(keys, start, end);
     }
 
+    //TODO Whoa, both accumulate methods are incorrect!
     /**
      * @inheritDoc
      */

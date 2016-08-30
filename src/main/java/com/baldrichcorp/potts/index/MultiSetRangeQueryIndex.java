@@ -3,8 +3,12 @@ package com.baldrichcorp.potts.index;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.TreeMultiset;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
@@ -17,9 +21,8 @@ import java.util.concurrent.atomic.LongAdder;
 public class MultiSetRangeQueryIndex<T, K extends Comparable<? super K>> implements RangeQueryIndex<T, K> {
 
     private Map<T, TreeMultiset<K>> index;
-
     public MultiSetRangeQueryIndex() {
-        this.index = new ConcurrentHashMap<>();
+        this.index = new HashMap<>();
     }
 
     /**
@@ -27,7 +30,7 @@ public class MultiSetRangeQueryIndex<T, K extends Comparable<? super K>> impleme
      */
     @Override
     public void add(T t, K pos) {
-        index.putIfAbsent(t, TreeMultiset.<K>create());
+        index.putIfAbsent(t, TreeMultiset.<K> create());
         index.get(t).add(pos);
     }
 
@@ -39,10 +42,7 @@ public class MultiSetRangeQueryIndex<T, K extends Comparable<? super K>> impleme
         TreeMultiset<K> observations = index.get(t);
         if (observations == null || left.compareTo(right) > 0)
             return 0;
-        int lower = observations.headMultiset(left, BoundType.OPEN).size();
-        int higher = observations.tailMultiset(right, BoundType.OPEN).size();
-        int ans = observations.size() - lower - higher;
-        return ans < 0 ? 0 : ans;
+        return observations.subMultiset(left, BoundType.CLOSED, right, BoundType.CLOSED).size();
     }
 
     /**
@@ -62,11 +62,6 @@ public class MultiSetRangeQueryIndex<T, K extends Comparable<? super K>> impleme
      */
     @Override
     public int count(K left, K right) {
-        LongAdder total = new LongAdder();
-        index.entrySet().parallelStream().forEach(e -> {
-            if (query(e.getKey(), left, right) > 0)
-                total.increment();
-        });
-        return total.intValue();
+        return index.keySet().stream().mapToInt(k -> query(k, left, right) > 0 ? 1 : 0).sum();
     }
 }

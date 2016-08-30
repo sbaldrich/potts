@@ -72,6 +72,7 @@ public interface MultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>
      */
     int count(final String indexIdentifier, T t, K start, K end);
 
+    RangeQueryResponse count(final T t, QueryRange<K>... range);
     /**
      * Accumulate all occurrences of from all instances that fall within the given range and have the longest proper prefix of
      * the keyset obtained from this element as a prefix.

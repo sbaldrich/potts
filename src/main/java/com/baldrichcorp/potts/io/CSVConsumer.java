@@ -35,7 +35,8 @@ public class CSVConsumer<T> implements Consumer<T> {
     public CSVConsumer(Reader reader, char delimiter, Function<CSVRecord, T> parser) {
         this.parser = parser;
         try {
-            records = CSVFormat.RFC4180.withDelimiter(delimiter).withFirstRecordAsHeader().parse(reader);
+            records = CSVFormat.RFC4180.withDelimiter(delimiter).withFirstRecordAsHeader().withIgnoreEmptyLines()
+                    .withTrim().parse(reader);
         } catch (IOException ex) {
             log.error("Couldn't load csv file: {}.", ex.getMessage());
         }
