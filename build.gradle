@@ -2,6 +2,8 @@ group 'com.baldrichcorp'
 version '0.1-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'maven'
+
 
 repositories {
     mavenCentral()
@@ -13,5 +15,4 @@ dependencies {
     compile 'ch.qos.logback:logback-classic:1.1.7'
     compile 'com.google.guava:guava:19.0'
     compile 'org.apache.commons:commons-csv:1.3'
-    compile 'org.apache.commons:commons-lang3:3.4'
 }

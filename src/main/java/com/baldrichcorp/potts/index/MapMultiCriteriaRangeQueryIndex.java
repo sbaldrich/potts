@@ -5,8 +5,6 @@ import com.baldrichcorp.potts.index.query.QueryRange;
 import com.baldrichcorp.potts.index.query.RangeQueryResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -15,11 +13,10 @@ import java.util.stream.Stream;
 /**
  * Map-based implementation of a {@code MultiCriteriaRangeQueryIndex}.
  *
- * @see MultisetRecursiveRangeQueryIndex
  * @param <T> the type of the elements that can be handled by this index.
  * @param <K> the type of the criterion used for comparison in queries.
- *
  * @author Santiago Baldrich.
+ * @see MultisetRecursiveRangeQueryIndex
  */
 @Slf4j
 public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>> implements MultiCriteriaRangeQueryIndex<T, K> {
@@ -59,7 +56,7 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
     public void add(T t, K pos) {
         generators.keySet().parallelStream().forEach(k -> {
             IndexKeySet ks = generators.get(k).apply(t);
-            if(!ks.hasNull())
+            if (!ks.hasNull())
                 index.get(k).add(ks, pos);
         });
     }
@@ -88,14 +85,14 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
      */
     @Override
     public RangeQueryResponse query(T t, QueryRange<K>... ranges) {
-        return Stream.of(ranges).map(range -> {
-            RangeQueryResponse response = new RangeQueryResponse(range);
-            generators.keySet().stream().forEach(k -> {
-                IndexKeySet ks = generators.get(k).apply(t);
-                response.add(k, ks.hasNull() ? -1 : index.get(k).query(ks, range.getStart(), range.getEnd()));
-            });
-            return response;
-        }).reduce(RangeQueryResponse::merge).orElse(null);
+        RangeQueryResponse response = new RangeQueryResponse(RangeQueryResponse.QueryType.JOINT);
+        Stream.of(ranges).parallel().forEach(range ->
+                generators.keySet().stream().forEach(k -> {
+                    IndexKeySet ks = generators.get(k).apply(t);
+                    response.add(k, range, ks.hasNull() ? -1 : index.get(k).query(ks, range.getStart(), range.getEnd()));
+                })
+        );
+        return response;
     }
 
     /**
@@ -103,15 +100,14 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
      */
     @Override
     public RangeQueryResponse count(T t, QueryRange<K>... ranges) {
-       return Stream.of(ranges).map(range -> {
-            RangeQueryResponse response = new RangeQueryResponse(range);
-            generators.keySet().stream().forEach(k -> {
-                IndexKeySet ks = generators.get(k).apply(t).drop();
-                response.add(k, ks.hasNull() ? -1 : index.get(k).count(ks, range.getStart(), range.getEnd()));
-            }
-            );
-            return response;
-        }).reduce(RangeQueryResponse::merge).orElse(null);
+        RangeQueryResponse response = new RangeQueryResponse(RangeQueryResponse.QueryType.COMBINATION);
+        Stream.of(ranges).parallel().forEach(range ->
+                generators.keySet().stream().forEach(k -> {
+                    IndexKeySet ks = generators.get(k).apply(t).drop();
+                    response.add(k, range, ks.hasNull() ? -1 : index.get(k).count(ks, range.getStart(), range.getEnd()));
+                })
+        );
+        return response;
     }
 
     /**
@@ -133,6 +129,7 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
     }
 
     //TODO Whoa, both accumulate methods are incorrect!
+
     /**
      * @inheritDoc
      */
@@ -153,6 +150,7 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
 
     /**
      * Check whether an index with the given id is absent and throw an {@code IllegalArgumentException} if true.
+     *
      * @param id
      */
     private void checkIndexAbsent(String id) {
@@ -163,6 +161,7 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
 
     /**
      * Check whether an index with the given id has already been defined and throw an {@code IllegalStateException} if true.
+     *
      * @param id
      */
     private void checkIndexPresent(String id) {

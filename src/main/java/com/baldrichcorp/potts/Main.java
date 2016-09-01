@@ -45,7 +45,14 @@ public class Main {
                 record.get("email"),
                 Integer.valueOf(record.get("pos"))));
 
-        Map<String, List<Integer>> response = new HashMap<>();
+//        Person p = queries.consume().limit(1).findAny().orElse(null);
+//        RangeQueryResponse response = index.query(p, QueryRange.of(1, 10),
+//                QueryRange.of(4, 4),
+//                QueryRange.of(2, 4));
+//        System.out.println(response);
+//        System.out.println(response.getResponseMap());
+
+        Map<String, List<?>> response = new HashMap<>();
 
 
         response.putAll(
@@ -66,9 +73,9 @@ public class Main {
 
         response.putAll(
                 queries.consume()
-                        .map(p -> index.count(p, QueryRange.of("c[1,10]", 1, 10),
-                                QueryRange.of("c[4,4]", 4, 4),
-                                QueryRange.of("c[2,4]", 2, 4)).getResponseMap())
+                        .map(p -> index.count(p, QueryRange.of(1, 10),
+                                QueryRange.of(4, 4),
+                                QueryRange.of(2, 4)).getResponseMap())
                         .flatMap(m -> m.entrySet().stream())
                         .collect(Collectors
                                 .groupingBy(Map.Entry::getKey,

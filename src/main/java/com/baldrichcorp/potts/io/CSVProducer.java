@@ -7,10 +7,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -24,6 +21,7 @@ import java.util.stream.Collectors;
 public class CSVProducer {
 
     static final String DEFAULT_CSV_DELIMITER = "\t";
+    static final String NOT_APPLICABLE = "NA";
     private final String delimiter;
 
     public CSVProducer(String delimiter) {
@@ -45,19 +43,28 @@ public class CSVProducer {
      * @param path the route to write the csv file into.
      */
     @SuppressWarnings("unchecked")
-    public void produce(Map<String, List<Integer>> responseMap, String path) {
+    public void produce(Map<String, List<?>> responseMap, Comparator<String> ordering, String path) {
         try (BufferedWriter writer = new BufferedWriter(Files.newBufferedWriter(Paths.get(path)))) {
-            writer.append(responseMap.keySet().stream().collect(Collectors.joining(delimiter, "", "\n")));
-            Iterator<String>[] iterators = responseMap.values().stream().map(Iterable::iterator).toArray(Iterator[]::new);
+            String[] keys = ordering == null ? responseMap.keySet().stream().toArray(String[] :: new) :
+                    responseMap.keySet().stream().sorted(ordering).toArray(String[] :: new);
+            writer.append(Arrays.stream(keys).collect(Collectors.joining(delimiter, "", "\n")));
+            Iterator<String>[] iterators = Arrays.stream(keys).map(responseMap :: get).map(Iterable::iterator).toArray(Iterator[]::new);
             while (iterators[0].hasNext()) {
                 writer.append(
                         Arrays.stream(iterators)
-                                .map(n -> String.valueOf(n.next()))
+                                .map(n -> {
+                                    Object next = n.next();
+                                    return next == null ? NOT_APPLICABLE : String.valueOf(next);
+                                })
                                 .collect(Collectors.joining(delimiter, "", "\n")));
             }
         } catch (IOException ex) {
             log.error("Couldn't produce csv", ex);
         }
+    }
+
+    public void produce(Map<String, List<?>> responseMap, String path) {
+        produce(responseMap, null, path);
     }
 
 }
