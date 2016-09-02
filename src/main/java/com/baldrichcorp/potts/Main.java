@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,21 +46,14 @@ public class Main {
                 record.get("email"),
                 Integer.valueOf(record.get("pos"))));
 
-//        Person p = queries.consume().limit(1).findAny().orElse(null);
-//        RangeQueryResponse response = index.query(p, QueryRange.of(1, 10),
-//                QueryRange.of(4, 4),
-//                QueryRange.of(2, 4));
-//        System.out.println(response);
-//        System.out.println(response.getResponseMap());
-
         Map<String, List<?>> response = new HashMap<>();
 
+        List<QueryRange<Integer>> relevantRanges = Arrays.asList(QueryRange.of(1, 10), QueryRange.of(4, 4), QueryRange.of(2, 4));
 
+        List<String> relevantIndices = Arrays.asList(NAME_INDEX, EMAIL_INDEX);
         response.putAll(
                 queries.consume()
-                        .map(p -> index.query(p, QueryRange.of(1, 10),
-                                QueryRange.of(4, 4),
-                                QueryRange.of(2, 4)).getResponseMap())
+                        .map(p -> index.query(p, relevantIndices, relevantRanges).getResponseMap())
                         .flatMap(m -> m.entrySet().stream())
                         .collect(Collectors
                                 .groupingBy(Map.Entry::getKey,
@@ -73,9 +67,7 @@ public class Main {
 
         response.putAll(
                 queries.consume()
-                        .map(p -> index.count(p, QueryRange.of(1, 10),
-                                QueryRange.of(4, 4),
-                                QueryRange.of(2, 4)).getResponseMap())
+                        .map(p -> index.count(p, Arrays.asList(NAME_PLUS_EMAIL_INDEX), relevantRanges).getResponseMap())
                         .flatMap(m -> m.entrySet().stream())
                         .collect(Collectors
                                 .groupingBy(Map.Entry::getKey,

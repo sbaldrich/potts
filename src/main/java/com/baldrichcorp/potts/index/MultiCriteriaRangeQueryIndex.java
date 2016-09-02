@@ -4,6 +4,7 @@ import com.baldrichcorp.potts.index.query.IndexKeySet;
 import com.baldrichcorp.potts.index.query.QueryRange;
 import com.baldrichcorp.potts.index.query.RangeQueryResponse;
 
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -60,7 +61,40 @@ public interface MultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>
      */
     int query(final String indexIdentifier, T t, K start, K end);
 
+    /**
+     * Perform a query on multiple ranges and return a {@code RangeQueryResponse} with the results.
+     * @param t the object from which the indexing keys will be extracted.
+     * @param range the ranges on which to perform the queries.
+     * @return A {@code RangeQueryResponse} with the results.
+     */
     RangeQueryResponse query(final T t, QueryRange<K>... range);
+
+    /**
+     * Perform queries on multiple indexes and multiple ranges (cross product) and return a {@code RangeQueryResponse}
+     * with the results.
+     *
+     * @see #count(String, Object, Comparable, Comparable)
+     *
+     * @param t the object from which the indexing keys will be extracted.
+     * @param indexIds the ids of the indices to query.
+     * @param ranges the ranges on which to perform the queries.
+     * @return
+     */
+    RangeQueryResponse query(final T t, List<String> indexIds, List<QueryRange<K>> ranges);
+
+    /**
+     * Perform counts on multiple indexes and multiple ranges (cross product) and return a {@code RangeQueryResponse}
+     * with the results.
+     *
+     * @see #count(String, Object, Comparable, Comparable)
+     *
+     * @param t the object from which the indexing keys will be extracted.
+     * @param indexIds the ids of the indices to query.
+     * @param ranges the ranges on which to perform the queries.
+     * @return
+     */
+    RangeQueryResponse count(final T t, List<String> indexIds, List<QueryRange<K>> ranges);
+
     /**
      * Count the number of different instances that fall within the given range and have the longest proper prefix of
      * the keyset obtained from this element as prefix.
@@ -72,7 +106,14 @@ public interface MultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>
      */
     int count(final String indexIdentifier, T t, K start, K end);
 
+    /**
+     * Perform a count on multiple ranges and return a {@code RangeQueryResponse} with the results.
+     * @param t the object from which the indexing keys will be extracted.
+     * @param range the ranges on which to perform the queries.
+     * @return A {@code RangeQueryResponse} with the results.
+     */
     RangeQueryResponse count(final T t, QueryRange<K>... range);
+
     /**
      * Accumulate all occurrences of from all instances that fall within the given range and have the longest proper prefix of
      * the keyset obtained from this element as a prefix.

@@ -5,6 +5,7 @@ import com.baldrichcorp.potts.index.query.QueryRange;
 import com.baldrichcorp.potts.index.query.RangeQueryResponse;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -54,7 +55,7 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
      */
     @Override
     public void add(T t, K pos) {
-        generators.keySet().parallelStream().forEach(k -> {
+        generators.keySet().stream().forEach(k -> {
             IndexKeySet ks = generators.get(k).apply(t);
             if (!ks.hasNull())
                 index.get(k).add(ks, pos);
@@ -84,12 +85,27 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
      * @inheritDoc
      */
     @Override
-    public RangeQueryResponse query(T t, QueryRange<K>... ranges) {
+    public RangeQueryResponse query(final T t, QueryRange<K>... ranges) {
         RangeQueryResponse response = new RangeQueryResponse(RangeQueryResponse.QueryType.JOINT);
         Stream.of(ranges).parallel().forEach(range ->
                 generators.keySet().stream().forEach(k -> {
                     IndexKeySet ks = generators.get(k).apply(t);
                     response.add(k, range, ks.hasNull() ? -1 : index.get(k).query(ks, range.getStart(), range.getEnd()));
+                })
+        );
+        return response;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public RangeQueryResponse query(final T t, List<String> indexIds, List<QueryRange<K>> ranges) {
+        RangeQueryResponse response = new RangeQueryResponse(RangeQueryResponse.QueryType.JOINT);
+        ranges.stream().forEach(range ->
+                indexIds.stream().forEach(ix -> {
+                    IndexKeySet ks = generators.get(ix).apply(t);
+                    response.add(ix, range, ks.hasNull() ? -1 : index.get(ix).query(ks, range.getStart(), range.getEnd()));
                 })
         );
         return response;
@@ -105,6 +121,22 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
                 generators.keySet().stream().forEach(k -> {
                     IndexKeySet ks = generators.get(k).apply(t).drop();
                     response.add(k, range, ks.hasNull() ? -1 : index.get(k).count(ks, range.getStart(), range.getEnd()));
+                })
+        );
+        return response;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public RangeQueryResponse count(final T t, List<String> indexIds, List<QueryRange<K>> ranges) {
+        RangeQueryResponse response = new RangeQueryResponse(RangeQueryResponse.QueryType.COMBINATION);
+        ranges.stream().peek
+                .forEach(range ->
+                indexIds.stream().forEach(ix -> {
+                    IndexKeySet ks = generators.get(ix).apply(t).drop();
+                    response.add(ix, range, ks.hasNull() ? -1 : index.get(ix).count(ks, range.getStart(), range.getEnd()));
                 })
         );
         return response;
