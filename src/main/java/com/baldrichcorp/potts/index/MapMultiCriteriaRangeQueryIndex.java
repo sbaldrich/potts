@@ -132,7 +132,7 @@ public class MapMultiCriteriaRangeQueryIndex<T, K extends Comparable<? super K>>
     @Override
     public RangeQueryResponse count(final T t, List<String> indexIds, List<QueryRange<K>> ranges) {
         RangeQueryResponse response = new RangeQueryResponse(RangeQueryResponse.QueryType.COMBINATION);
-        ranges.stream().peek
+        ranges.stream()
                 .forEach(range ->
                 indexIds.stream().forEach(ix -> {
                     IndexKeySet ks = generators.get(ix).apply(t).drop();
